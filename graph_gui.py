@@ -2,7 +2,7 @@ import sys
 import math
 import operator
 
-from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QAction, qApp, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QApplication, QMainWindow, QAction, qApp, QSizePolicy, QSlider
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPainter
 from PyQt5.QtGui import QIcon
@@ -30,6 +30,12 @@ class MainWindow(QMainWindow):
     def initUI(self):
 
         self.mode = self.MODE_VERTEX
+
+        self.setGeometry(300, 300, 500, 500)
+        self.setWindowTitle('Simple graph')    
+
+        self.canvas = Canvas()
+        self.setCentralWidget(self.canvas)
         
         exitAction = QAction(QIcon('exit24.png'), 'Exit', self)
         exitAction.setShortcut('Ctrl+Q')
@@ -56,6 +62,13 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(addEdgeAction)
         self.toolbar.addAction(deleteVertexAction)
 
+        sld = QSlider(Qt.Horizontal)
+        sld.valueChanged.connect(self.vertexResize)
+        sld.setMinimum(1)
+        sld.setMaximum(15)
+
+        self.toolbar.addWidget(sld)
+
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.toolbar.addWidget(spacer)
@@ -63,13 +76,13 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(exitAction)
         
         
-        self.setGeometry(300, 300, 500, 500)
-        self.setWindowTitle('Toolbar')    
 
-        self.canvas = Canvas()
-        self.setCentralWidget(self.canvas)
 
         self.show()
+
+    def vertexResize(self, value):
+        self.canvas.point_radius = value
+        self.canvas.update()
 
 
     def vertexMode(self):
@@ -95,7 +108,7 @@ class MainWindow(QMainWindow):
 
 class Canvas(QWidget):
 
-    POINT_RADIUS = 3
+    point_radius = 3
     DELTA = 3
 
     def __init__(self, parent=None):
@@ -130,7 +143,7 @@ class Canvas(QWidget):
             elif i in self.draggin_idx:
                 qp.setBrush(Qt.blue)
 
-            qp.drawEllipse(qpoint, self.POINT_RADIUS*2, self.POINT_RADIUS*2)
+            qp.drawEllipse(qpoint, self.point_radius*2, self.point_radius*2)
 
             qp.setBrush(Qt.black)
                 
@@ -148,7 +161,7 @@ class Canvas(QWidget):
         distances = []
         for v in self.vertices:
             distances.append(math.sqrt(sum((i1 - i2)**2 for i1, i2 in zip(v, vertex))))
-        if distances and (min(distances) < self.POINT_RADIUS + self.DELTA):
+        if distances and (min(distances) < self.point_radius + self.DELTA):
             captured_vertex_idx, _ = min(enumerate(distances), key=operator.itemgetter(1))
             return captured_vertex_idx
         return None
