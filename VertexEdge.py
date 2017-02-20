@@ -76,12 +76,6 @@ class Vertex:
     def __eq__(self, other):
         return len(self) == len(other) and all(a == b for a,b in zip(self, other))
 
-    '''
-    def __hash__(self):
-        hashes = (hash(x) for x in self)
-        return functools.reduce(operator.xor, hashes)
-    '''
-
 
     def __abs__(self):
         return math.sqrt(sum(x * x for x in self))
@@ -201,6 +195,7 @@ class Edge:
     def v1(self):
         return self._v1
 
+
     @v1.setter
     def v1(self, value):
         cls = type(self)
@@ -210,9 +205,11 @@ class Edge:
             msg = '{.__name__}() argument must be Vertex'
             raise TypeError(msg.format(cls))
 
+
     @property
     def v2(self):
         return self._v2
+
 
     @v2.setter
     def v2(self, value):
@@ -223,16 +220,14 @@ class Edge:
             msg = '{.__name__}() argument must be Vertex'
             raise TypeError(msg.format(cls))
 
+
     def __eq__(self, other):
         return self.v1 == other.v1 and self.v2 == other.v2 and self.oriented == other.oriented
 
-    '''
-    def __hash__(self):
-        return operator.xor(hash(self.v1), hash(self.v2)) << int(self.oriented) # TODO: check and test
-    '''
 
     def __abs__(self):
         return math.sqrt(sum((i1 - i2)**2 for i1, i2 in zip(self.v1, self.v2))) # multidimensional
+
 
 if __name__ == "__main__": 
     doctest.testmod()

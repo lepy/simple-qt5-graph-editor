@@ -15,10 +15,12 @@ class MainWindow(QMainWindow):
     MODE_VERTEX = 'V'
     MODE_VERTEX_DEL = 'D'
     MODE_EDGE = 'E'
+    MODE_FIND = 'P'
 
     MSG_MODE_VERTEX = 'Vertex insert and move mode'
     MSG_MODE_VERTEX_DEL = 'Vertex delete mode'
     MSG_MODE_EDGE = 'Edge insert mode'
+    MSG_MODE_FIND = 'Path find mode'
     
 
     def __init__(self):
@@ -53,6 +55,10 @@ class MainWindow(QMainWindow):
         deleteVertexAction.setShortcut('Ctrl+D')
         deleteVertexAction.triggered.connect(self.deleteMode)
 
+        findPathAction = QAction(QIcon('find.png'), 'Path', self)
+        findPathAction.setShortcut('Ctrl+P')
+        findPathAction.triggered.connect(self.findMode)
+
         self.statusBar()
         self.statusBar().showMessage(self.MSG_MODE_VERTEX)
         
@@ -61,6 +67,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(insertVertexAction)
         self.toolbar.addAction(addEdgeAction)
         self.toolbar.addAction(deleteVertexAction)
+        self.toolbar.addAction(findPathAction)
 
         sld = QSlider(Qt.Horizontal)
         sld.valueChanged.connect(self.vertexResize)
@@ -75,9 +82,6 @@ class MainWindow(QMainWindow):
 
         self.toolbar.addAction(exitAction)
         
-        
-
-
         self.show()
 
     def vertexResize(self, value):
@@ -104,6 +108,13 @@ class MainWindow(QMainWindow):
         self.selected_vertex_idx = None
         self.draggin_idx = []
         self.statusBar().showMessage(self.MSG_MODE_EDGE)
+
+
+    def findMode(self):
+        self.canvas.mode = self.MODE_FIND
+        self.selected_vertex_idx = None
+        self.draggin_idx = []
+        self.statusBar().showMessage(self.MSG_MODE_FIND)
 
 
 class Canvas(QWidget):
@@ -192,11 +203,11 @@ class Canvas(QWidget):
         del self.vertices[vertex_idx]
 
 
-    def addEdge(self, v1_idx, v2_idx, oriented=False):
+    def addEdge(self, v1_idx, v2_idx, directed=False):
         v1 = self.vertices[v1_idx]
         v2 = self.vertices[v2_idx]
-        new_edge = Edge(v1, v2, oriented)
-        new_edge_backwards = Edge(v2, v1, oriented)
+        new_edge = Edge(v1, v2, directed)
+        new_edge_backwards = Edge(v2, v1, directed)
         if not new_edge in self.edges[id(v1)] and not new_edge_backwards in self.edges[id(v2)]:
             self.edges[id(v1)].append(new_edge)
         return
@@ -273,6 +284,25 @@ class Canvas(QWidget):
 
                 self.update()
 
+        elif self.mode == MainWindow.MODE_FIND:
+            if evt.button() == Qt.LeftButton and self.draggin_idx == []:
+                x, y = self._get_point(evt)
+                captured_vertex_idx = self._capture_vertex(x, y)
+                if not captured_vertex_idx is None:
+                    if self.selected_vertex_idx is None:
+                        self.selected_vertex_idx = captured_vertex_idx
+                        self.update()
+                    else:
+                        if self.selected_vertex_idx == captured_vertex_idx: # same vertex, deselect
+                            self.selected_vertex_idx = None
+                            self.update()
+                        else:
+                            distances, chain = self.dijkstra(self.selected_vertex_idx)
+                            print("#"*30, " Dijkstra result ", "#"*30)
+                            print(distances, chain)
+                            self.selected_vertex_idx = None
+                            self.update()
+
 
     def mouseMoveEvent(self, evt):
         if self.draggin_idx != [] and not self.cotrolPressed:
@@ -318,6 +348,55 @@ class Canvas(QWidget):
 
             self.draggin_idx = []
             self.update()
+
+
+    def dijkstra(self, v1_idx, directed=True):
+
+        v1 = self.vertices[v1_idx]
+
+        dist = {}
+        prev = {}
+        q = {}
+        visited = set()
+
+        for v in self.vertices:
+            dist[id(v)] = 999999999
+            prev[id(v)] = -1
+            q[id(v)] = v
+
+        print(self.edges)
+        print(v1)
+        print(q)
+
+        dist[id(v1)] = 0
+
+        while len(visited) != len(q):
+
+            print('visited')
+            print(visited)
+
+            temp_dict = {}
+            for k,v in dist.items():
+                if k not in visited:
+                    temp_dict[k] = v
+            i = min(temp_dict, key=temp_dict.get)
+
+            print(i)
+            visited.add(i)
+
+            v = q[i]
+            print('Visiting {0!r}'.format(v))
+
+            for e in self.edges[i]:
+                if id(e.v2) in q and id(e.v2) not in visited:
+                    alt = dist[i] + abs(e)
+                    if alt < dist[id(e.v2)]:
+                        dist[id(e.v2)] = alt
+                        prev[id(e.v2)] = id(i)
+
+            print("*"*50)
+
+        return dist, prev
 
 
 if __name__ == '__main__':
